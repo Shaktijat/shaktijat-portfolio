@@ -29,11 +29,37 @@ function Contact() {
         const text = await res.text()
         console.error('Netlify response error', res.status, text)
         setStatus({ state: 'error', detail: `Server ${res.status}: ${text}` })
+        // Fallback: build and submit a native form (will navigate away)
+        fallbackNativeSubmit(payload)
       }
     } catch (err) {
       console.error('Netlify submit exception', err)
       setStatus({ state: 'error', detail: err.message || String(err) })
+      // Network error: try native form submit as a fallback
+      try { fallbackNativeSubmit({ 'form-name': 'contact', ...form }) } catch (e) { console.error('fallback submit failed', e) }
     }
+  }
+
+  // If AJAX posting fails, create a regular form and submit it so Netlify can process it
+  const fallbackNativeSubmit = (payload) => {
+    if (typeof document === 'undefined') return
+    const formEl = document.createElement('form')
+    formEl.method = 'POST'
+    formEl.action = '/'
+    formEl.style.display = 'none'
+    formEl.setAttribute('data-netlify', 'true')
+    formEl.name = 'contact'
+
+    Object.keys(payload).forEach((key) => {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = key
+      input.value = payload[key]
+      formEl.appendChild(input)
+    })
+
+    document.body.appendChild(formEl)
+    formEl.submit()
   }
 
   return (
