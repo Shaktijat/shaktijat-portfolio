@@ -26,10 +26,13 @@ function Contact() {
         setStatus('sent')
         setForm({ name: '', email: '', message: '' })
       } else {
-        setStatus('error')
+        const text = await res.text()
+        console.error('Netlify response error', res.status, text)
+        setStatus({ state: 'error', detail: `Server ${res.status}: ${text}` })
       }
     } catch (err) {
-      setStatus('error')
+      console.error('Netlify submit exception', err)
+      setStatus({ state: 'error', detail: err.message || String(err) })
     }
   }
 
@@ -81,6 +84,7 @@ function Contact() {
 
             <button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Sending...' : 'Submit now'}</button>
             {status === 'sent' && <div className="form-success">Thanks — message sent!</div>}
+            {status && status.state === 'error' && <div className="form-error">Error sending: {status.detail}</div>}
             {status === 'error' && <div className="form-error">Error sending, try later.</div>}
           </form>
         </div>
