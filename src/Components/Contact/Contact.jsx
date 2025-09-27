@@ -11,6 +11,9 @@ function Contact() {
 
   // Netlify-friendly AJAX submit: posts form-encoded data to /contact
   const encode = (data) => Object.keys(data).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&')
+  // Optional external fallback endpoint (set in Vite env: VITE_FORM_ENDPOINT)
+  // Example for Formsubmit.co AJAX: https://formsubmit.co/ajax/youremail@example.com
+  const FALLBACK_ENDPOINT = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FORM_ENDPOINT ? import.meta.env.VITE_FORM_ENDPOINT : ''
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -30,13 +33,49 @@ function Contact() {
         console.error('Netlify response error', res.status, text)
         setStatus({ state: 'error', detail: `Server ${res.status}: ${text}` })
         // Fallback: build and submit a native form (will navigate away)
+        // Try external fallback endpoint first (AJAX). If configured and fails, fall back to native submit.
+        if (FALLBACK_ENDPOINT) {
+          try {
+            const extRes = await fetch(FALLBACK_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({ name: payload.name, email: payload.email, message: payload.message })
+            })
+            if (extRes && (extRes.ok || extRes.status === 200 || extRes.status === 201)) {
+              setStatus('sent')
+              setForm({ name: '', email: '', message: '' })
+              return
+            }
+            // if external failed, continue to native fallback
+            console.warn('External form endpoint did not accept submission', extRes && extRes.status)
+          } catch (e) {
+            console.warn('External fallback submit failed', e)
+          }
+        }
         fallbackNativeSubmit(payload, '/contact-success.html')
       }
     } catch (err) {
       console.error('Netlify submit exception', err)
       setStatus({ state: 'error', detail: err.message || String(err) })
       // Network error: try native form submit as a fallback
-      try { fallbackNativeSubmit({ 'form-name': 'contact', ...form }, '/contact-success.html') } catch (e) { console.error('fallback submit failed', e) }
+      try { 
+        // try external fallback first
+        if (FALLBACK_ENDPOINT) {
+          try {
+            await fetch(FALLBACK_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({ name: form.name, email: form.email, message: form.message })
+            })
+            setStatus('sent')
+            setForm({ name: '', email: '', message: '' })
+            return
+          } catch (e) {
+            console.warn('External fallback failed', e)
+          }
+        }
+        fallbackNativeSubmit({ 'form-name': 'contact', ...form }, '/contact-success.html') 
+      } catch (e) { console.error('fallback submit failed', e) }
     }
   }
 
