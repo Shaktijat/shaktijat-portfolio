@@ -5,6 +5,7 @@ import { FaEnvelope, FaPhoneAlt, FaMapMarkerAlt } from "react-icons/fa";
 function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [status, setStatus] = useState(null)
+  const [errorDetail, setErrorDetail] = useState(null)
 
   // Netlify: data-netlify="true" (works after deploy). Formspree fallback available.
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
@@ -25,57 +26,77 @@ function Contact() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: encode(payload),
       })
+
       if (res.ok) {
         setStatus('sent')
         setForm({ name: '', email: '', message: '' })
-      } else {
-        const text = await res.text()
-        console.error('Netlify response error', res.status, text)
-        setStatus({ state: 'error', detail: `Server ${res.status}: ${text}` })
-        // Fallback: build and submit a native form (will navigate away)
-        // Try external fallback endpoint first (AJAX). If configured and fails, fall back to native submit.
-        if (FALLBACK_ENDPOINT) {
-          try {
-            const extRes = await fetch(FALLBACK_ENDPOINT, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ name: payload.name, email: payload.email, message: payload.message })
-            })
-            if (extRes && (extRes.ok || extRes.status === 200 || extRes.status === 201)) {
-              setStatus('sent')
-              setForm({ name: '', email: '', message: '' })
-              return
-            }
-            // if external failed, continue to native fallback
-            console.warn('External form endpoint did not accept submission', extRes && extRes.status)
-          } catch (e) {
-            console.warn('External fallback submit failed', e)
-          }
-        }
-        fallbackNativeSubmit(payload, '/contact-success.html')
+        setErrorDetail(null)
+        return
       }
-    } catch (err) {
-      console.error('Netlify submit exception', err)
-      setStatus({ state: 'error', detail: err.message || String(err) })
-      // Network error: try native form submit as a fallback
-      try { 
-        // try external fallback first
-        if (FALLBACK_ENDPOINT) {
-          try {
-            await fetch(FALLBACK_ENDPOINT, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ name: form.name, email: form.email, message: form.message })
-            })
+
+      // Non-OK response from Netlify — capture short detail and attempt fallbacks
+      const text = await res.text()
+      console.error('Netlify response error', res.status, text)
+      setStatus('error')
+      setErrorDetail(`Server ${res.status}: ${text.substring(0, 150)}${text.length > 150 ? '...' : ''}`)
+
+      // Try external AJAX fallback if configured
+      if (FALLBACK_ENDPOINT) {
+        try {
+          const extRes = await fetch(FALLBACK_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ name: payload.name, email: payload.email, message: payload.message })
+          })
+          if (extRes && (extRes.ok || extRes.status === 200 || extRes.status === 201)) {
             setStatus('sent')
             setForm({ name: '', email: '', message: '' })
+            setErrorDetail(null)
             return
-          } catch (e) {
-            console.warn('External fallback failed', e)
           }
+          console.warn('External form endpoint did not accept submission', extRes && extRes.status)
+        } catch (e) {
+          console.warn('External fallback submit failed', e)
         }
-        fallbackNativeSubmit({ 'form-name': 'contact', ...form }, '/contact-success.html') 
-      } catch (e) { console.error('fallback submit failed', e) }
+      }
+
+      // As a last resort, submit a native form which will navigate the browser
+      try {
+        fallbackNativeSubmit(payload, '/contact-success.html')
+      } catch (e) {
+        console.error('fallback submit failed', e)
+      }
+    } catch (err) {
+      // Network or unexpected error — log and try fallbacks
+      console.error('Netlify submit exception', err)
+      setStatus('error')
+      setErrorDetail(err.message || String(err))
+
+      // Try external AJAX fallback first
+      if (FALLBACK_ENDPOINT) {
+        try {
+          const extRes = await fetch(FALLBACK_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ name: form.name, email: form.email, message: form.message })
+          })
+          if (extRes && (extRes.ok || extRes.status === 200 || extRes.status === 201)) {
+            setStatus('sent')
+            setForm({ name: '', email: '', message: '' })
+            setErrorDetail(null)
+            return
+          }
+        } catch (e) {
+          console.warn('External fallback failed', e)
+        }
+      }
+
+      // Native fallback
+      try {
+        fallbackNativeSubmit({ 'form-name': 'contact', ...form }, '/contact-success.html')
+      } catch (e) {
+        console.error('fallback submit failed', e)
+      }
     }
   }
 
@@ -156,8 +177,7 @@ function Contact() {
 
             <button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Sending...' : 'Submit now'}</button>
             {status === 'sent' && <div className="form-success">Thanks — message sent!</div>}
-            {status && status.state === 'error' && <div className="form-error">Error sending: {status.detail}</div>}
-            {status === 'error' && <div className="form-error">Error sending, try later.</div>}
+            {status === 'error' && <div className="form-error">Error sending message. Please try again later.</div>}
           </form>
         </div>
       </div>
