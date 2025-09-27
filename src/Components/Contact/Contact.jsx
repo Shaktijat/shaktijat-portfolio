@@ -9,7 +9,7 @@ function Contact() {
   // Netlify: data-netlify="true" (works after deploy). Formspree fallback available.
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  // Netlify-friendly AJAX submit: posts form-encoded data to current origin
+  // Netlify-friendly AJAX submit: posts form-encoded data to /contact
   const encode = (data) => Object.keys(data).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&')
 
   const onSubmit = async (e) => {
@@ -17,7 +17,7 @@ function Contact() {
     setStatus('sending')
     try {
       const payload = { 'form-name': 'contact', ...form }
-      const res = await fetch('/', {
+      const res = await fetch('/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: encode(payload),
@@ -30,22 +30,22 @@ function Contact() {
         console.error('Netlify response error', res.status, text)
         setStatus({ state: 'error', detail: `Server ${res.status}: ${text}` })
         // Fallback: build and submit a native form (will navigate away)
-        fallbackNativeSubmit(payload)
+        fallbackNativeSubmit(payload, '/contact-success.html')
       }
     } catch (err) {
       console.error('Netlify submit exception', err)
       setStatus({ state: 'error', detail: err.message || String(err) })
       // Network error: try native form submit as a fallback
-      try { fallbackNativeSubmit({ 'form-name': 'contact', ...form }) } catch (e) { console.error('fallback submit failed', e) }
+      try { fallbackNativeSubmit({ 'form-name': 'contact', ...form }, '/contact-success.html') } catch (e) { console.error('fallback submit failed', e) }
     }
   }
 
   // If AJAX posting fails, create a regular form and submit it so Netlify can process it
-  const fallbackNativeSubmit = (payload) => {
+  const fallbackNativeSubmit = (payload, redirect = '/') => {
     if (typeof document === 'undefined') return
     const formEl = document.createElement('form')
     formEl.method = 'POST'
-    formEl.action = '/'
+    formEl.action = '/contact'
     formEl.style.display = 'none'
     formEl.setAttribute('data-netlify', 'true')
     formEl.name = 'contact'
@@ -57,6 +57,13 @@ function Contact() {
       input.value = payload[key]
       formEl.appendChild(input)
     })
+
+    // Add a redirect field Netlify supports via 'redirect' query or native HTML redirect
+    const redirectInput = document.createElement('input')
+    redirectInput.type = 'hidden'
+    redirectInput.name = 'redirect'
+    redirectInput.value = redirect
+    formEl.appendChild(redirectInput)
 
     document.body.appendChild(formEl)
     formEl.submit()
