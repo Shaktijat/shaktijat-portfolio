@@ -39,15 +39,15 @@ function About() {
       </div>
       <div className="about-stats">
         <div className="stat">
-          <div className="stat-number">10+</div>
+          <div className="stat-number">3+</div>
           <div className="stat-label">YEARS OF EXPERIENCE</div>
         </div>
         <div className="stat">
-          <div className="stat-number">90+</div>
+          <div className="stat-number">5+</div>
           <div className="stat-label">PROJECTS COMPLETED</div>
         </div>
         <div className="stat">
-          <div className="stat-number">45+</div>
+          <div className="stat-number">5+</div>
           <div className="stat-label">HAPPY CLIENTS</div>
         </div>
       </div>
