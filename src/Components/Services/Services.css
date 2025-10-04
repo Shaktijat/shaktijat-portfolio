@@ -60,3 +60,8 @@
 .service-link:hover {
   background: linear-gradient(90deg, #ff6a00 40%, #a259ff 100%);
 }
+
+@media (max-width: 420px) {
+  .services-title { font-size: 1.6rem }
+  .service-card { padding: 18px }
+}

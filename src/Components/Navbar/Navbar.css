@@ -32,6 +32,11 @@
     padding: 6px 4px;
     transition: color 0.15s;
 }
+
+@media (max-width: 420px) {
+    .nav-menu { gap: 10px; font-size: 0.95rem }
+    .nav-menu a.active::after { width: 22px; bottom: -10px }
+}
 .nav-menu a.active {
     color: #a259ff;
     font-weight: 700;

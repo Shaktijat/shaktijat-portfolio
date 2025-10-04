@@ -95,3 +95,10 @@
         font-size: 1rem;
     }
 }
+
+@media (max-width: 420px) {
+    .hero h1 { font-size: 1.6rem }
+    .hero p { font-size: 0.95rem; width: 94vw }
+    .hero-action { gap: 12px }
+    .hero-connect, .hero-resume { padding: 10px 16px; font-size: 0.95rem }
+}

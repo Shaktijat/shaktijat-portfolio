@@ -64,3 +64,8 @@
 .portfolio-showmore:hover {
   background: linear-gradient(90deg, #ff6a00 40%, #a259ff 100%);
 }
+
+@media (max-width: 420px) {
+  .portfolio-title { font-size: 1.6rem }
+  .portfolio-card { padding: 18px }
+}

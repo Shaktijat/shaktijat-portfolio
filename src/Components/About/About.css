@@ -154,3 +154,10 @@
    transform: scale(1.05);
    transition: 0.3s;
 }
+
+@media (max-width: 420px) {
+    .about-img img { width: 180px; height: 200px }
+    .about-main { gap: 18px; padding: 0 12px }
+    .about-title { font-size: 1.6rem }
+    .skill-label { width: 100px }
+}
